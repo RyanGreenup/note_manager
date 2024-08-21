@@ -42,7 +42,6 @@ def Move(source: str, destination: str, directory: Path):
     else:
         dest_d = os.path.dirname(destination)
 
-
     source_p: Path = Path(source)
     dest_p: Path = Path(destination)
     dir_p: Path = Path(directory)
@@ -69,8 +68,6 @@ def Move(source: str, destination: str, directory: Path):
             # ],
         }
         for file in directory.glob("**/*.md")
-        # TODO remove
-        if "bar" in str(file)
     }
 
     # pprint(remap)
@@ -81,11 +78,10 @@ def Move(source: str, destination: str, directory: Path):
         content = f.read()
 
     for file, info in remap.items():
-        content = content.replace(info["from"], info["to"])
+        content = replace_links(info["from"], info["to"], content)
 
     with open(source, "w") as f:
         f.write(content)
-
 
     # TODO assess if quicker to read the file and check if the string is in there
     # or just find/replace
@@ -96,7 +92,6 @@ def Move(source: str, destination: str, directory: Path):
             "to": path.relpath(destination, path.dirname(file)),
         }
         for file in directory.glob("**/*.md")
-        if "Coursework/index.md" in str(file)
     }
 
     pprint(remap)
@@ -107,14 +102,40 @@ def Move(source: str, destination: str, directory: Path):
         with open(file, "r") as f:
             content = f.read()
 
-            if info["from"] in content:
-                print(file)
-                content = content.replace(info["from"], info["to"])
+        if any([ly in content for ly in make_links(info["from"])]):
+            content = replace_links(info["from"], info["to"], content)
 
-                with open(file, "w") as f:
-                    f.write(content)
+            with open(file, "w") as f:
+                f.write(content)
 
 
+def replace_links(before: str, after: str, content: str) -> str:
+    before_markdown_links = make_links(before)
+    after_markdown_links = make_links(after)
+
+    if any([ly in content for ly in before_markdown_links]):
+        for before, after in zip(before_markdown_links, after_markdown_links):
+            content = content.replace(before, after)
+
+    return content
+
+
+def make_links(filepath: str) -> list[str]:
+    filepath_no_ext = os.path.splitext(filepath)[0]
+    return [
+        # Markdown Links
+        f"]({filepath})",
+        # Wiki Links
+        f"[[{filepath}]]",
+        f"[[{filepath_no_ext}]]",
+        # Definition LInks
+        f": {filepath}",
+        # HTML
+        f'="{filepath}"',
+        f'= "{filepath}"',
+        f"='{filepath}'",
+        f"= '{filepath}'",
+    ]
 
 
 def file_contains_link(source: str, file: str) -> bool:
@@ -136,19 +157,20 @@ def file_contains_link(source: str, file: str) -> bool:
                 return True
     return False
 
+
 def make_md_links(path: str) -> list[str]:
     path_no_ext = os.path.splitext(path)[0]
     return [
-            f": {path}",
-            f"[[{path}]]",
-            f"[[{path_no_ext}]]",
-            f"({path})",
-            # For HTML etc.
-            f'="{path}"',
-            f'= "{path}"',
-            f"='{path}'",
-            f"= '{path}'",
-        ]
+        f": {path}",
+        f"[[{path}]]",
+        f"[[{path_no_ext}]]",
+        f"({path})",
+        # For HTML etc.
+        f'="{path}"',
+        f'= "{path}"',
+        f"='{path}'",
+        f"= '{path}'",
+    ]
 
 
 def file_is_note_and_contains_string(filepath: Path, string: str) -> bool:
