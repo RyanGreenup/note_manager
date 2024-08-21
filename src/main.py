@@ -4,6 +4,9 @@ import os
 from os import path
 from pathlib import Path
 import logging
+import fzf
+
+cli = click.Group()
 
 # TODO need to also move .ipynb, .Rmd etc.
 
@@ -26,6 +29,20 @@ def add_directory_option(func):
         help="The directory to operate on",
     )(func)
     return func
+
+
+@click.command()
+@add_directory_option
+@click.argument("current_file", type=click.Path(exists=True))
+def make_link(current_file: str, directory: Path):
+    files = Path(directory).glob("**/*.md")
+    note_dir = os.path.dirname(current_file)
+    if os.path.isdir(current_file):
+        note_dir = current_file
+    files = [str(f.relative_to(directory, walk_up=True)) for f in files]
+    file = fzf.fzf(files)
+    file = os.path.relpath(os.path.join(directory, file[0][1]), note_dir)
+    print(file)
 
 
 @click.command()
@@ -181,4 +198,6 @@ def target_under_directory(source: Path, dest_dir: Path) -> bool:
 
 
 if __name__ == "__main__":
-    Move()
+    cli.add_command(Move)
+    cli.add_command(make_link)
+    cli()
