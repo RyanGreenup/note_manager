@@ -2,6 +2,24 @@
 
 This is a simple python tool to move markdown notes and update the links in the notes. This is primarily designed for nested directories (which are useful for breadcrumbs with, e.g., Quartz, WikiJS, mkdocs etc.).
 
+![cli](assets/cli.png)
+
+## Installation
+
+```bash
+pipx install 'git+https://github.com/RyanGreenup/note_manager' --force
+# use --force to update
+```
+
+## Usage
+
+```
+# Destination and source may be directories (git commit first)
+nmgr move <source> <destination>
+```
+
+
+## Motivation
 For example, in a flat corpus the following is (mostly) sufficient to rename a note:
 
 ```bash
