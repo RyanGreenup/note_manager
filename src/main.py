@@ -57,15 +57,6 @@ def Move(source: str, destination: str, directory: Path):
         file: {
             "from": path.relpath(file, path.dirname(source)),
             "to": path.relpath(file, dest_d),
-            # TODO refactor and handle, e.g. ./knn.md and knn.md
-            # "candidates": [
-            #     ": " + path.relpath(file, source),
-            #     f"[[{path.relpath(file, source)}]]",
-            #     f"[[{path.splitext(path.relpath(file, source))[0]}]]",
-            #     f"({path.relpath(file, source)})",
-            #     f'="{path.relpath(file, source)}"',  # for images and HTML
-            #     f'= "{path.relpath(file, source)}"',  # for images and HTML
-            # ],
         }
         for file in directory.glob("**/*.md")
     }
@@ -74,14 +65,8 @@ def Move(source: str, destination: str, directory: Path):
 
     # TODO deal with link formats
     # TODO strip leading ./
-    with open(source, "r") as f:
-        content = f.read()
-
     for file, info in remap.items():
-        content = replace_links(info["from"], info["to"], content)
-
-    with open(source, "w") as f:
-        f.write(content)
+        replace_links(info["from"], info["to"], source_p)
 
     # TODO assess if quicker to read the file and check if the string is in there
     # or just find/replace
@@ -97,27 +82,23 @@ def Move(source: str, destination: str, directory: Path):
     pprint(remap)
 
     for file, info in remap.items():
-        # TODO deal with link formats
-        # TODO strip leading ./
-        with open(file, "r") as f:
-            content = f.read()
-
-        if any([ly in content for ly in make_links(info["from"])]):
-            content = replace_links(info["from"], info["to"], content)
-
-            with open(file, "w") as f:
-                f.write(content)
+        replace_links(info["from"], info["to"], file)
 
 
-def replace_links(before: str, after: str, content: str) -> str:
+def replace_links(before: str, after: str, file: Path):
+    # TODO deal with link formats
+    # TODO strip leading ./
+    with open(file, "r") as f:
+        content = f.read()
+
     before_markdown_links = make_links(before)
     after_markdown_links = make_links(after)
-
     if any([ly in content for ly in before_markdown_links]):
         for before, after in zip(before_markdown_links, after_markdown_links):
             content = content.replace(before, after)
 
-    return content
+        with open(file, "w") as f:
+            f.write(content)
 
 
 def make_links(filepath: str) -> list[str]:
