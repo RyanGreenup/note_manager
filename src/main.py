@@ -108,6 +108,7 @@ def move_file_to_file(
 
     # 3. Move the file
     if move_file:
+        destination.parent.mkdir(parents=True, exist_ok=True)
         source.rename(destination)
 
 
