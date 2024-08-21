@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import click
+import typer
 import os
 from os import path
 from pathlib import Path
 import logging
 import fzf
 
-cli = click.Group()
+cli = typer.Typer()
 
 # TODO need to also move .ipynb, .Rmd etc.
 
@@ -21,20 +21,8 @@ dest = Path("/home/ryan/Notes/20210802123456.md")
 dest.absolute().is_relative_to(NOTES_DIR)
 
 
-def add_directory_option(func):
-    func = click.option(
-        "--directory",
-        default=NOTES_DIR,
-        type=click.Path(exists=True),
-        help="The directory to operate on",
-    )(func)
-    return func
-
-
-@click.command()
-@add_directory_option
-@click.argument("current_file", type=click.Path(exists=True))
-def make_link(current_file: str, directory: Path):
+@cli.command()
+def make_link(current_file: str, directory: Path = NOTES_DIR):
     files = Path(directory).glob("**/*.md")
     note_dir = os.path.dirname(current_file)
     if os.path.isdir(current_file):
@@ -45,11 +33,8 @@ def make_link(current_file: str, directory: Path):
     print(file)
 
 
-@click.command()
-@add_directory_option
-@click.argument("source", type=click.Path(exists=True))
-@click.argument("destination")
-def Move(source: str, destination: str, directory: Path):
+@cli.command()
+def Move(source: str, destination: str, directory: Path = NOTES_DIR):
     """Move a note and update links."""
     source_p = Path(source)
     destination_p = Path(destination)
@@ -198,6 +183,4 @@ def target_under_directory(source: Path, dest_dir: Path) -> bool:
 
 
 if __name__ == "__main__":
-    cli.add_command(Move)
-    cli.add_command(make_link)
     cli()
