@@ -51,6 +51,9 @@ def Move(source: str, destination: str, directory: Path = NOTES_DIR):
             for file in Path(source_p).glob("**/*.md"):
                 move_file_to_file(file, destination_p, directory)
         else:
+            if not os.path.exists(destination_p):
+                if destination_p.suffix == "":
+                    os.makedirs(destination_p)
             # Make the user create a directory, don't assume
             logging.error(
                 "Source is a directory but destination is not, create a directory first"
