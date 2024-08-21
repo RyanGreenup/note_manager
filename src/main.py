@@ -27,43 +27,48 @@ def add_directory_option(func):
     )(func)
     return func
 
+
 # TODO Move needs to be able to take both dir and str
+
 
 @click.command()
 @add_directory_option
 @click.argument("source", type=click.Path(exists=True))
 @click.argument("destination")
 def Move(source: str, destination: str, directory: Path):
+    source_p = Path(source)
+    destination_p = Path(destination)
+    directory_p = Path(directory)
 
     # Check if destination is under directory
-    if not target_under_directory(Path(directory), Path(source)):
+    if not target_under_directory(source_p, Path(directory_p)):
         logging.warning("Destination is not under directory")
-        if 'y' != input("Continue? [y/n]"):
+        if "y" != input("Continue? [y/n]"):
             return
 
-    if os.path.isdir(source):
-        if os.path.isdir(destination):
-            for file in Path(source).glob("**/*.md"):
-                # TODO casting is bad
-                move_file_to_file(str(file), destination, directory)
+    # Handle moving directories
+    if os.path.isdir(source_p):
+        if os.path.isdir(destination_p):
+            for file in Path(source_p).glob("**/*.md"):
+                move_file_to_file(file, destination_p, directory)
         else:
             # Make the user create a directory, don't assume
-            logging.error("Source is a directory but destination is not, create a directory first")
+            logging.error(
+                "Source is a directory but destination is not, create a directory first"
+            )
     else:
-        move_file_to_file(source, destination, directory)
+        move_file_to_file(source_p, destination_p, directory)
 
 
-
-
-def move_file_to_file(source: str, destination: str, directory: Path):
+def move_file_to_file(source: Path, destination: Path, directory: Path):
     """Move a note and update links. If the destination is a directory, preserves the basename."""
+    # Handle the target being a directory
     if os.path.isdir(destination):
         dest_d = destination
-        destination = os.path.join(destination, os.path.basename(source))
+        destination = Path.joinpath(destination, os.path.basename(source))
     else:
         dest_d = os.path.dirname(destination)
 
-    source_p: Path = Path(source)
     print(f"Source: {source}, Destination: {destination}")
 
     # 1. Change links within the file being moved
@@ -75,7 +80,7 @@ def move_file_to_file(source: str, destination: str, directory: Path):
         for file in directory.glob("**/*.md")
     }
     for file, info in remap.items():
-        replace_links(info["from"], info["to"], source_p)
+        replace_links(info["from"], info["to"], source)
 
     # 2. Change links in other files
     remap = {
@@ -179,7 +184,7 @@ def file_contains_string(file: Path, string: str) -> bool:
 
 
 def target_under_directory(source: Path, dest_dir: Path) -> bool:
-    return source.absolute().is_relative_to(dest_dir.absolute())
+    return str(dest_dir) in str(source)
 
 
 def get_notes() -> list[Path]:
