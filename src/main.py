@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 import click
 import os
-import re
 from os import path
 from pathlib import Path
 import logging
-from pprint import pprint
 
 # TODO need to also move .ipynb, .Rmd etc.
 
@@ -29,12 +27,35 @@ def add_directory_option(func):
     )(func)
     return func
 
+# TODO Move needs to be able to take both dir and str
 
 @click.command()
 @add_directory_option
 @click.argument("source", type=click.Path(exists=True))
 @click.argument("destination")
 def Move(source: str, destination: str, directory: Path):
+
+    # Check if destination is under directory
+    if not target_under_directory(Path(directory), Path(source)):
+        logging.warning("Destination is not under directory")
+        if 'y' != input("Continue? [y/n]"):
+            return
+
+    if os.path.isdir(source):
+        if os.path.isdir(destination):
+            for file in Path(source).glob("**/*.md"):
+                # TODO casting is bad
+                move_file_to_file(str(file), destination, directory)
+        else:
+            # Make the user create a directory, don't assume
+            logging.error("Source is a directory but destination is not, create a directory first")
+    else:
+        move_file_to_file(source, destination, directory)
+
+
+
+
+def move_file_to_file(source: str, destination: str, directory: Path):
     """Move a note and update links. If the destination is a directory, preserves the basename."""
     if os.path.isdir(destination):
         dest_d = destination
@@ -43,16 +64,9 @@ def Move(source: str, destination: str, directory: Path):
         dest_d = os.path.dirname(destination)
 
     source_p: Path = Path(source)
-    dest_p: Path = Path(destination)
-    dir_p: Path = Path(directory)
     print(f"Source: {source}, Destination: {destination}")
 
-    # TODO is the notes directory even needed?
-    # Check if destination is under directory
-    if not target_under_directory(source_p, dir_p):
-        logging.warning("Destination is not under directory")
-
-    # DONE update links inside that file
+    # 1. Change links within the file being moved
     remap = {
         file: {
             "from": path.relpath(file, path.dirname(source)),
@@ -60,16 +74,10 @@ def Move(source: str, destination: str, directory: Path):
         }
         for file in directory.glob("**/*.md")
     }
-
-    # pprint(remap)
-
-    # TODO deal with link formats
-    # TODO strip leading ./
     for file, info in remap.items():
         replace_links(info["from"], info["to"], source_p)
 
-    # TODO assess if quicker to read the file and check if the string is in there
-    # or just find/replace
+    # 2. Change links in other files
     remap = {
         file: {
             # TODO define destination var if it's a dir not a file
@@ -79,10 +87,11 @@ def Move(source: str, destination: str, directory: Path):
         for file in directory.glob("**/*.md")
     }
 
-    pprint(remap)
-
     for file, info in remap.items():
         replace_links(info["from"], info["to"], file)
+
+    # 3. Move the file
+    # source_p.rename(destination)
 
 
 def replace_links(before: str, after: str, file: Path):
