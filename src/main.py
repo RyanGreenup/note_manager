@@ -41,10 +41,9 @@ def Move(source: str, destination: str, directory: Path = NOTES_DIR):
     directory_p = Path(directory)
 
     # Check if destination is under directory
+    # TODO this seems to throw FP
     if not target_under_directory(source_p, Path(directory_p)):
         logging.warning("Destination is not under directory")
-        if "y" != input("Continue? [y/n]"):
-            return
 
     # Handle moving directories
     if os.path.isdir(source_p):
