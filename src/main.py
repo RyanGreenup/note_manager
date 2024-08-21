@@ -48,11 +48,12 @@ def Move(source: str, destination: str, directory: Path):
     if not target_under_directory(source_p, dir_p):
         logging.warning("Destination is not under directory")
 
-    # TODO update links inside that file
+    # DONE update links inside that file
     remap = {
         file: {
             "from": path.relpath(file, path.dirname(source)),
             "to": path.relpath(file, dest_d),
+            # TODO refactor and handle, e.g. ./knn.md and knn.md
             "candidates": [
                 ": " + path.relpath(file, source),
                 f"[[{path.relpath(file, source)}]]",
@@ -73,6 +74,39 @@ def Move(source: str, destination: str, directory: Path):
         # Replace each candidate path with the "to" path using a regular expression
         for candidate in info["candidates"]:
             content = re.sub(re.escape(candidate), f": {info['to']}", content)
+
+        # Write the updated contents back to the file
+        with open(file, "w") as f:
+            f.write(content)
+
+    pprint(remap)
+
+    # TODO update files that point to this one
+    remap = {
+        file: {
+            "from": path.relpath(source, path.dirname(source)),
+            "to": path.relpath(source, dest_d),
+            "candidates": [
+                ": " + path.relpath(source, os.path.dirname(file)),
+                f"[[{path.relpath(source, os.path.dirname(file))}]]",
+                f"[[{path.splitext(path.relpath(source, os.path.dirname(file)))[0]}]]",
+                f"({path.relpath(source, os.path.dirname(file))})",
+                f'="{path.relpath(source, os.path.dirname(file))}"',  # for images and HTML
+                f'= "{path.relpath(source, os.path.dirname(file))}"',  # for images and HTML
+            ],
+        }
+        for file in directory.glob("**/*.md")
+        if "Notes/slipbox/Coursework/index.md" in str(file)
+    }
+
+    for file, info in remap.items():
+        # Read the contents of the file into a string
+        with open(file, "r") as f:
+            content = f.read()
+
+        # Replace each candidate path with the "to" path using a regular expression
+        for candidate in info["candidates"]:
+            content = re.sub(re.escape(candidate), f"{info['to']}", content)
 
         # Write the updated contents back to the file
         with open(file, "w") as f:
