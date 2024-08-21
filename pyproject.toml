@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "note-manager"
+version = "0.1.0"
+description = ""
+authors = ["ryan <exogenesis@protonmail.com>"]
+readme = "README.md"
+packages = [{include = "*", from="src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.scripts]
+ait = "main:app"
