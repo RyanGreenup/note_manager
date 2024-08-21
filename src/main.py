@@ -28,9 +28,6 @@ def add_directory_option(func):
     return func
 
 
-# TODO Move needs to be able to take both dir and str
-
-
 @click.command()
 @add_directory_option
 @click.argument("source", type=click.Path(exists=True))
@@ -60,7 +57,9 @@ def Move(source: str, destination: str, directory: Path):
         move_file_to_file(source_p, destination_p, directory)
 
 
-def move_file_to_file(source: Path, destination: Path, directory: Path):
+def move_file_to_file(
+    source: Path, destination: Path, directory: Path, move_file: bool = True
+):
     """Move a note and update links. If the destination is a directory, preserves the basename."""
     # Handle the target being a directory
     if os.path.isdir(destination):
@@ -96,7 +95,8 @@ def move_file_to_file(source: Path, destination: Path, directory: Path):
         replace_links(info["from"], info["to"], file)
 
     # 3. Move the file
-    # source_p.rename(destination)
+    if move_file:
+        source.rename(destination)
 
 
 def replace_links(before: str, after: str, file: Path):
@@ -133,72 +133,8 @@ def make_links(filepath: str) -> list[str]:
     ]
 
 
-def file_contains_link(source: str, file: str) -> bool:
-    # rel_source = os.path.relpath(source, os.path.dirname(file))
-    # rel_source_no_ext = os.path.splitext(rel_source)[0]
-    rel_source = str(file.relative_to(source, walk_up=True))
-    rel_source_no_ext = str(os.path.splitext(rel_source)[0])
-    candidates = [
-        f": {rel_source}",
-        f"[[{rel_source}]]",
-        f"[[{rel_source_no_ext}]]",
-        f"({rel_source})",
-        f'"{rel_source}"',  # for images and HTML
-    ]
-
-    with open(file) as f:
-        for line in f:
-            if any(c in line for c in candidates):
-                return True
-    return False
-
-
-def make_md_links(path: str) -> list[str]:
-    path_no_ext = os.path.splitext(path)[0]
-    return [
-        f": {path}",
-        f"[[{path}]]",
-        f"[[{path_no_ext}]]",
-        f"({path})",
-        # For HTML etc.
-        f'="{path}"',
-        f'= "{path}"',
-        f"='{path}'",
-        f"= '{path}'",
-    ]
-
-
-def file_is_note_and_contains_string(filepath: Path, string: str) -> bool:
-    print(filepath)
-    if not file_is_note(filepath):
-        return False
-    return file_contains_string(filepath, string)
-
-
-def file_is_note(filepath: Path) -> bool:
-    return filepath.suffix in [".md"]
-
-
-def file_contains_string(file: Path, string: str) -> bool:
-    return string in file.read_text()
-
-
 def target_under_directory(source: Path, dest_dir: Path) -> bool:
     return str(dest_dir) in str(source)
-
-
-def get_notes() -> list[Path]:
-    notes_dir = "/home/ryan/Notes/slipbox/"
-    files = [
-        [os.path.join(root, file) for file in files if file.endswith(".md")]
-        for root, _, files in os.walk(notes_dir)
-    ]
-    # Flatten the list
-    files = [file for sublist in files for file in sublist]
-    # Make them paths
-    files = [Path(file) for file in files]
-
-    return files
 
 
 if __name__ == "__main__":
