@@ -36,7 +36,12 @@ def add_directory_option(func):
 @click.argument("destination")
 def Move(source: str, destination: str, directory: Path):
     """Move a note and update links. If the destination is a directory, preserves the basename."""
-    dest_d = destination if os.path.isdir(destination) else os.path.dirname(destination)
+    if os.path.isdir(destination):
+        dest_d = destination
+        destination = os.path.join(destination, os.path.basename(source))
+    else:
+        dest_d = os.path.dirname(destination)
+
 
     source_p: Path = Path(source)
     dest_p: Path = Path(destination)
@@ -54,87 +59,62 @@ def Move(source: str, destination: str, directory: Path):
             "from": path.relpath(file, path.dirname(source)),
             "to": path.relpath(file, dest_d),
             # TODO refactor and handle, e.g. ./knn.md and knn.md
-            "candidates": [
-                ": " + path.relpath(file, source),
-                f"[[{path.relpath(file, source)}]]",
-                f"[[{path.splitext(path.relpath(file, source))[0]}]]",
-                f"({path.relpath(file, source)})",
-                f'="{path.relpath(file, source)}"',  # for images and HTML
-                f'= "{path.relpath(file, source)}"',  # for images and HTML
-            ],
+            # "candidates": [
+            #     ": " + path.relpath(file, source),
+            #     f"[[{path.relpath(file, source)}]]",
+            #     f"[[{path.splitext(path.relpath(file, source))[0]}]]",
+            #     f"({path.relpath(file, source)})",
+            #     f'="{path.relpath(file, source)}"',  # for images and HTML
+            #     f'= "{path.relpath(file, source)}"',  # for images and HTML
+            # ],
         }
         for file in directory.glob("**/*.md")
+        # TODO remove
+        if "bar" in str(file)
     }
 
+    # pprint(remap)
+
+    # TODO deal with link formats
+    # TODO strip leading ./
+    with open(source, "r") as f:
+        content = f.read()
+
     for file, info in remap.items():
-        # Read the contents of the file into a string
-        with open(file, "r") as f:
-            content = f.read()
+        content = content.replace(info["from"], info["to"])
 
-        # Replace each candidate path with the "to" path using a regular expression
-        for candidate in info["candidates"]:
-            content = re.sub(re.escape(candidate), f": {info['to']}", content)
+    with open(source, "w") as f:
+        f.write(content)
 
-        # Write the updated contents back to the file
-        with open(file, "w") as f:
-            f.write(content)
 
-    pprint(remap)
-
-    # TODO update files that point to this one
+    # TODO assess if quicker to read the file and check if the string is in there
+    # or just find/replace
     remap = {
         file: {
-            "from": path.relpath(source, path.dirname(source)),
-            "to": path.relpath(source, dest_d),
-            "candidates": [
-                ": " + path.relpath(source, os.path.dirname(file)),
-                f"[[{path.relpath(source, os.path.dirname(file))}]]",
-                f"[[{path.splitext(path.relpath(source, os.path.dirname(file)))[0]}]]",
-                f"({path.relpath(source, os.path.dirname(file))})",
-                f'="{path.relpath(source, os.path.dirname(file))}"',  # for images and HTML
-                f'= "{path.relpath(source, os.path.dirname(file))}"',  # for images and HTML
-            ],
+            # TODO define destination var if it's a dir not a file
+            "from": path.relpath(source, path.dirname(file)),
+            "to": path.relpath(destination, path.dirname(file)),
         }
         for file in directory.glob("**/*.md")
-        if "Notes/slipbox/Coursework/index.md" in str(file)
+        if "Coursework/index.md" in str(file)
     }
-
-    for file, info in remap.items():
-        # Read the contents of the file into a string
-        with open(file, "r") as f:
-            content = f.read()
-
-        # Replace each candidate path with the "to" path using a regular expression
-        for candidate in info["candidates"]:
-            content = re.sub(re.escape(candidate), f"{info['to']}", content)
-
-        # Write the updated contents back to the file
-        with open(file, "w") as f:
-            f.write(content)
 
     pprint(remap)
 
-    # TODO update links to that file
+    for file, info in remap.items():
+        # TODO deal with link formats
+        # TODO strip leading ./
+        with open(file, "r") as f:
+            content = f.read()
 
-    # Identify the notes that link to this note
-    # files = [
-    #     [
-    #         os.path.join(root, file)
-    #         for file in files
-    #         if file_is_note(Path(file))
-    #         # TODO need to handle different link types
-    #         and file_contains_link(os.path.join(root, source), os.path.join(root, file))
-    #     ]
-    #     for root, _, files in os.walk(directory)
-    # ]
+            if info["from"] in content:
+                print(file)
+                content = content.replace(info["from"], info["to"])
 
-    # # Now test that dictionary for the links
-    # for file, mapping in remap.items():
-    #     original = mapping["from"]
-    #     new = mapping["to"]
-    #     if original in file.read_text():
-    #         print(f"Found link in {file} to {original}")
-    #
+                with open(file, "w") as f:
+                    f.write(content)
+
+
 
 
 def file_contains_link(source: str, file: str) -> bool:
@@ -155,6 +135,20 @@ def file_contains_link(source: str, file: str) -> bool:
             if any(c in line for c in candidates):
                 return True
     return False
+
+def make_md_links(path: str) -> list[str]:
+    path_no_ext = os.path.splitext(path)[0]
+    return [
+            f": {path}",
+            f"[[{path}]]",
+            f"[[{path_no_ext}]]",
+            f"({path})",
+            # For HTML etc.
+            f'="{path}"',
+            f'= "{path}"',
+            f"='{path}'",
+            f"= '{path}'",
+        ]
 
 
 def file_is_note_and_contains_string(filepath: Path, string: str) -> bool:
