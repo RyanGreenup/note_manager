@@ -33,6 +33,7 @@ def add_directory_option(func):
 @click.argument("source", type=click.Path(exists=True))
 @click.argument("destination")
 def Move(source: str, destination: str, directory: Path):
+    """Move a note and update links."""
     source_p = Path(source)
     destination_p = Path(destination)
     directory_p = Path(directory)
@@ -60,7 +61,14 @@ def Move(source: str, destination: str, directory: Path):
 def move_file_to_file(
     source: Path, destination: Path, directory: Path, move_file: bool = True
 ):
-    """Move a note and update links. If the destination is a directory, preserves the basename."""
+    """Move a file and update links.
+
+    Args:
+        source: The source file to move
+        destination: The destination target or directory
+        directory: The directory of notes, e.g. ~/Notes/
+        move_file: Whether to actually move the file or just update links
+    """
     # Handle the target being a directory
     if os.path.isdir(destination):
         dest_d = destination
@@ -100,6 +108,19 @@ def move_file_to_file(
 
 
 def replace_links(before: str, after: str, file: Path):
+    """Replace markdown links in a file based on before and after
+    filenames.
+
+    Args:
+        before: The path to the file that will be in the file
+        after: The resulting path to the file
+        file: The file to replace links in
+
+    Examples:
+        # The note.md file contains [link](file.md)
+        replace_links("file.md", "new_file.md", "note.md")
+        # Now note.md contains [link](new_file.md)
+    """
     # TODO deal with link formats
     # TODO strip leading ./
     with open(file, "r") as f:
@@ -116,6 +137,19 @@ def replace_links(before: str, after: str, file: Path):
 
 
 def make_links(filepath: str) -> list[str]:
+    """Generate a list of possible markdown link formats for a given a filepath
+
+    Args:
+        filepath: The path to generate links for
+
+    Returns:
+        A list of strings that represent different markdown link formats
+
+    Examples:
+        make_links("file.md")
+        # Returns ["(file.md)", "[file.md]", "[file]", ": file.md", '="file.md"', ...]
+
+    """
     filepath_no_ext = os.path.splitext(filepath)[0]
     return [
         # Markdown Links
@@ -134,6 +168,15 @@ def make_links(filepath: str) -> list[str]:
 
 
 def target_under_directory(source: Path, dest_dir: Path) -> bool:
+    """Check if the destination is under the directory.
+
+    Args:
+        source: The source file or directory
+        dest_dir: The destination directory
+
+    Returns:
+        True if the destination is under the directory, False otherwise
+    """
     return str(dest_dir) in str(source)
 
 
